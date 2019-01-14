@@ -34,6 +34,4 @@ module.exports = {
 };
 
 
-for (var i=0;i<20;i++) {
-    console.log(generateGaussianNoise(1,20,2))
-}
+

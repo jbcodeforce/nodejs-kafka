@@ -41,7 +41,6 @@ var consumer = new Consumer(client,
 
     // By default, we will consume messages from the last committed offset of the current group
 consumer.on('message', function (message) {
-    console.log(message);
     // TODO aggregate total number of command per product
     // in case to use buffer: var buf = new Buffer(message.value, "binary"); 
     var decodedOrder = JSON.parse(message.value.toString());
