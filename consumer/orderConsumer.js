@@ -18,8 +18,8 @@ const client = new kafka.KafkaClient({
 
 var consumer = new Consumer(client,
     [{ topic: 'orders-topic',
-    // offset: 0, 
-     // partition: partitionId
+     offset: 0, 
+     partition: 0
     }],
     {
         groupId: 'order-consumer-group',//consumer group id
@@ -32,7 +32,7 @@ var consumer = new Consumer(client,
         // The maximum bytes to include in the message set for this partition. This helps bound the size of the response.
         fetchMaxBytes: 1024 * 1024, 
         // If set true, consumer will fetch message from the given offset in the payloads
-        fromOffset: false,
+        fromOffset: true,
         // If set to 'buffer', values will be returned as raw buffer objects.
         encoding: 'utf8',
         keyEncoding: 'utf8'
@@ -44,7 +44,7 @@ consumer.on('message', function (message) {
     // TODO aggregate total number of command per product
     // in case to use buffer: var buf = new Buffer(message.value, "binary"); 
     var decodedOrder = JSON.parse(message.value.toString());
-    console.log(decodedOrder.productId + " " + decodedOrder.quantity);
+    console.log("Product ID: "+ decodedOrder.productId + " quantity= " + decodedOrder.quantity + " at " + decodedOrder.timestamp);
 });
 
 consumer.on("error", function(err) {

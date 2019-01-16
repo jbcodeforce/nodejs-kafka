@@ -32,7 +32,7 @@ var producer = new Producer(client,{
 var products = utils.generateProducts(50);
 
 var cb= function(err,data) {
-   console.log("In callback recieved: " + data)
+   console.log("In callback received: " + JSON.stringify(data));
 }
 
 // For this demo we just log producer errors to the console.
@@ -46,7 +46,8 @@ producer.on("ready", function(){
     for (var i=0; i < numberOfOrders; i++) {
         var pid = Math.round(utils.generateGaussianNoise(0,products.length,2));
         var q = Math.round(utils.generateGaussianNoise(0,5000,3));
-        var order = {id: i, company: "retailer-1", productId: products[pid], quantity: q , unitPrice: 5,   timestamp: Date.now() };
+        var price =  Math.round(utils.generateGaussianNoise(0,500,3));
+        var order = {id: i, company: "retailer-1", productId: products[pid], quantity: q , unitPrice: price,   timestamp: Date.now() };
         var orderAsString = JSON.stringify(order);
         console.log('Send order '+ orderAsString);
         const buffer = new Buffer.from(orderAsString);

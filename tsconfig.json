@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "outDir": "./dist/",
+        "sourceMap": false,
+        "noResolve": false,
+        "moduleResolution": "node",
+        "typeRoots": [
+            "node_modules/@types"
+        ],
+        "lib": [
+            "es2017"
+          ]
+    },
+    "include": [
+        "**.ts"
+       ],
+    "exclude": [
+        "dist",
+        "test",
+        "node_modules"
+    ]
+}
