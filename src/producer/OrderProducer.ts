@@ -1,11 +1,10 @@
 const kafka = require('kafka-node');
 const Producer = kafka.Producer;
 // externalize the configuration
-import AppConfig  from './AppConfig';
-import * as domain from './OrderDomain';
-import * as rxjs from 'rxjs';
+import AppConfig  from '../config/AppConfig';
+import * as domain from '../model/OrderDomain';
 
-export default class OrderService {
+export default class OrderProducer {
     config: AppConfig;
     producer: any;
     producerReady: boolean = false;
@@ -42,43 +41,25 @@ export default class OrderService {
     }
 
     createOrder(o: domain.Order): domain.Order {
-        console.log('Create Order event for : ' + JSON.stringify(o));
-        let event: domain.OrderEvent = new domain.OrderEvent();
-        event.order = o;
-        event.orderID = o.orderID;
-        event.timestamp = new Date();
-        // call persistence
-        event.type = "OrderCreated";
-        let evtAsString = JSON.stringify(event);
-        console.log(" send order event " + evtAsString);
-        let payload = [{
-            topic: this.config.getOrderTopicName(),
-            message: [evtAsString]
-        }];
-        this.producer.send(payload,)
-        return o;
+        if (this.producerReady) {
+            console.log('Create Order event for : ' + JSON.stringify(o));
+            let event: domain.OrderEvent = new domain.OrderEvent();
+            event.order = o;
+            event.orderID = o.orderID;
+            event.timestamp = new Date();
+            // call persistence
+            event.type = "OrderCreated";
+            let evtAsString = JSON.stringify(event);
+            console.log(" send order event " + evtAsString);
+            let payload = [{
+                topic: this.config.getOrderTopicName(),
+                message: [evtAsString]
+            }];
+            this.producer.send(payload,)
+            return o;
+        }
+       
     }
     
 }
-
-/**
-* Self executing anonymous function using TS as a main
-*/
-(()=> {
-    console.log("###################################");
-    console.log("# Produce orders to orders-topic  #");
-    console.log("###################################");
-    let order: domain.Order = new domain.Order();
-    order.creationDate = new Date();
-    order.expectedDeliveryDate = "03/15/2019";
-    order.orderID = "order001";
-    order.productID = "product 01";
-    order.quantity = 10;
-
-    let producer = new OrderService();
-    while (! producer.producerReady) {
-        var ready = setInterval( () => {console.log('.')}, 1000); 
-    }
-    producer.createOrder(order);
-})();
 

@@ -5,12 +5,12 @@ const kafka = require('kafka-node');
 const utils = require('./util');
 
 var Producer = kafka.Producer;
-
+const topicName = 'orders';
 var args = process.argv.slice(2);
 var numberOfOrders = args[0];
 
 console.log("###################################");
-console.log("# Producer orders to orders-topic #");
+console.log("# Producer orders to " + topicName);
 console.log(" # of orders " + numberOfOrders);
 
 
@@ -52,7 +52,7 @@ producer.on("ready", function(){
         console.log('Send order '+ orderAsString);
         const buffer = new Buffer.from(orderAsString);
         const produceRequest = [{
-            topic: "orders-topic",
+            topic: topicName,
             messages: buffer,
             attributes: 0 // control message compression: 0: no compression ,1: GZip, 2: snappy
         }];

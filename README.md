@@ -1,32 +1,41 @@
 # Nodejs Kafka consumers and producers
 
-In this example I want to illustrate the [event sourcing](#event-sourcing-pattern) pattern using kafka, nodejs and expressjs. One code will be used as producer, other as consumers, assigned to a Kafka consumer group to match the number of partition allocated to the order-topic. 
+In this example I want to illustrate the [event sourcing](#event-sourcing-pattern) pattern using kafka, nodejs and expressjs. The business case is for order management when event about the order life cycle are posted to the `order` topic, and then consumers are used to persist into a database the order, or compute statistics like what is the period where we sell more orders. 
 
 ## Pre-requisite
 * [Here are my notes on Kafka](https://github.com/ibm-cloud-architecture/refarch-eda/tree/master/docs/kafka) 
-* Have a kafka broker with zookeeper running somewhere: can be Event Streams on IBM Cloud, or using the `docker compose` file as defined in [this project](https://github.com/ibm-cloud-architecture/refarch-kc/tree/master/docker), or use a kubernetes deployment with multiple brokers. 
+* Have a kafka broker with zookeeper running somewhere: can be Event Streams on IBM Cloud, or using the `docker compose` (backbone-compose.yml) file as defined in [this project](https://github.com/ibm-cloud-architecture/refarch-kc/tree/master/docker), or use a kubernetes deployment with multiple brokers as described [here](https://github.com/ibm-cloud-architecture/refarch-eda/tree/master/deployments/kafka/README.md). 
+
 * Create the dependant topic with the command:
 ```
 docker exec -ti docker_kafka1_1  /bin/bash -c "kafka-topics --create  --zookeeper zookeeper1:2181 --replication-factor 1 --partitions 1 --topic orders-topic"
 ```
+I have created a script to simplify this topic creation as `scripts/createTopic.sh`
 
 ## Event sourcing pattern
 Most business applications are state based persistence where an update change the previous state of business entities. When a change needs to be made to the domain the changes are done on the new entities added to the system, the old ones are not impacted. But some requirements need to capture changes from the past history. For example being able to answer how often something happenned in the last year.
 
-[Introduced by Martin Fowler](https://martinfowler.com/eaaDev/EventSourcing.html) event sourcing is a pattern to store application state updates as a immutable sequence of ordered events. Using Kafka as event log we can reconstruct past states. 
-The key to Event Sourcing is that we guarantee that all changes to the domain objects are initiated by the event objects. This means we can do a complete rebuild of the application by parsing the event log. Using the event timestamp we can do temporal query to assess the state of the application at a given point of time. 
+[Introduced by Martin Fowler](https://martinfowler.com/eaaDev/EventSourcing.html) event sourcing is a pattern to store application state updates as a immutable sequence of ordered events. It is important to keep integrity in the log. History should never be rewritten, then event should be immutable, and log being append only.
+
+![](./docs/es-base.png)
+
+Using Kafka as event log we can reconstruct past states. 
+The key to Event Sourcing is that we guarantee that all changes to the domain objects are initiated by the event objects. This means we can do a complete rebuild of the application by parsing the event log. 
+
+![](./docs/es-replay.png)  
+
+But replaying the events it is important to do not replay the side effects, like for example sending a notification as it will impact the consumer semantic, except if those services are idempotent.
+Sometime it may be too long to replay hundreds of events. In that case we can use snapshot, to capture the current state of an entity, and then replay events from the most recent snapshot. This is an optimization technique not needed for all event sourcing. When state change events are in low volume there is no need for snapshots.
+
+The code in `tests/eventsourcing` is demonstrating how event sourcing is used by a consumer to write data into a DB by committing offset once save. Then the test stop the connection to the DB, and stop the consumer after it logs error to disk. Then it restarts the consumer to replay from the last committed offset.
+
+Also using the event timestamp we can do temporal query to assess the state of the application at a given point of time. 
 
 Event sourcing enables to add application in the future that needs to process the same older events to do their business logic. 
-
-Even sourcing only capture the intent, in the form of events stored in the log. To get the final state of an entity, the system needs to replay all the events, which means replaying the changes to the state not the side effects, like for example sending a notification. Sometime it may be too long to replay hundreds of events. In that case we can use snapshot, to capture the current state of an entity, and then replay events from the most recent snapshot. This is an optimization technique not needed for all event sourcing. When state change events are in low volume there is no need for snapshots.
-
-It is important to keep integrity in the log. History should never be rewritten, then event should be immutable, and log being append only.
 
 What to do when we need to add attribute to event. So we need to create a versioninig schema for event structure. You need to use flexible schema like json or protobuf and may be Event adapter to translate between the different event schemas.
 
 The event sourcing pattern is well described in [this article on microservices.io](https://microservices.io/patterns/data/event-sourcing.html). It is a very important pattern for EDA and microservices to microservices data synchronization needs.
-
-See also this nice [event sourcing article](https://martinfowler.com/eaaDev/EventSourcing.html) from Martin Fowler. 
 
 ### Command sourcing
 
@@ -43,8 +52,8 @@ The CQRS pattern was introduced by [Greg Young](https://www.youtube.com/watch?v=
 
 ## Solution outline
 
-* one nodejs producer (orderProducer.js) of Order events to the order-topic. The program arguments are used to specify the number of orders to send. It uses the kafka nodejs module.
-* Order has a customer id referencing which shop orders the product. It includes the order number, a status, a total amount, a total quantity, the product referenced and the expected delivery date. 
+* one nodejs producer (orderProducer.js) emits Order events to the order-topic. The program arguments are used to specify the number of orders to send. It uses the kafka nodejs module.
+* Order has a customer id referencing which shop orders the products. It includes the order number, a status, a total amount, a total quantity, the product referenced and the expected delivery date. 
 * one consumer that can be scaled horizontally and that is part of a consumer group
 * Use CQRS to implement getting the history of an order. The filter may apply to a specific product
 
@@ -116,7 +125,7 @@ Consumer groups are grouping consumers to cooperate to consume messages from one
 
 ### Event sourcing specific:
 
-To implement event sourcing we need ordered event and event type. So we delete the topic and recreated it with one partition so events are ordered. We added a type to the event.
+To implement event sourcing we need ordered event and event type. So we delete the topic and recreated it with one partition so events are ordered. We added a type to the order event definition.
 
 The OrderESProducer.ts is a TypeScript implementation of the event producer and it creates order events with different event type so now the state of the Order can be recreated. The order classes are defined in the OrderDomain.ts. 
 

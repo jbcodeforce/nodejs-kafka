@@ -2,8 +2,8 @@
     "compilerOptions": {
         "target": "es6",
         "module": "commonjs",
-        "outDir": "./dist/",
-        "sourceMap": false,
+        "outDir": "./dist",
+        "sourceMap": true,
         "noResolve": false,
         "moduleResolution": "node",
         "typeRoots": [
@@ -14,11 +14,10 @@
           ]
     },
     "include": [
-        "**.ts"
+        "src/**/*.ts"
        ],
     "exclude": [
         "dist",
-        "test",
         "node_modules"
     ]
 }

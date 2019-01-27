@@ -1,0 +1,5 @@
+{ "kafkaBrokers" : "localhost:9092",
+  "kafkaConnectTimeout" : 15000,
+  "kafkaGroupId": "jbkafkagroup",
+  "orderTopicName" : "orders"
+ }
